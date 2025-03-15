@@ -1,0 +1,23 @@
+# Adapter and quality trimming:
+trim_galore --paired $f1 $f2 --cores 4 --dont_gzip --output_dir
+
+# Mapping to the reference genome
+hisat2 -p5 -x grch38_84 -1 $f1 -2 $f2 | samtools view -@ 5 -bS -o $f1.bam
+samtools sort $f1 -@ 5 -o $f1.sorted.bam
+samtools index $f1
+
+# Variant calling and annotation
+
+java -jar VarScan.jar somatic control.pileup KO.pileup --min-coverage 10 --output-vcf 1 --vcf-sample-list output.txt
+
+annotate_variation.pl hg38_ensGene
+
+table_annovar.pl C344.vcf \
+humandb/ \
+  -buildver hg38 \
+  -out out_anno \
+  -protocol refGeneWithVer \
+  -operation gx \
+  -xref example/gene_xref.txt \
+  -remove -nastring . -polish \
+  -vcfinput
